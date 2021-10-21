@@ -1,0 +1,71 @@
+pool:
+  vmImage: windows-2019
+
+variables:
+- name: BuildParameters.RestoreBuildProjects
+  value: '**/*.csproj'
+- name: BuildConfiguration
+  value: Release
+
+trigger:
+  branches:
+    include:
+    - master
+name: $(date:yyyyMMdd)$(rev:.r)
+
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+    - job: Build
+      steps:
+      - task: DotNetCoreCLI@2
+        displayName: Restore
+        inputs:
+          command: restore
+          projects: '**/*.csproj'
+
+      - task: DotNetCoreCLI@2
+        displayName: Build
+        inputs:
+          projects: '**/*.csproj'
+          arguments: '--configuration $(BuildConfiguration)'
+
+      - task: DotNetCoreCLI@2
+        displayName: Publish
+        inputs:
+          command: publish
+          publishWebProjects: True
+          arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
+          zipAfterPublish: True
+
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish Artifact'
+        inputs:
+          PathtoPublish: '$(build.artifactstagingdirectory)'
+        condition: succeededOrFailed()
+- stage: Deploy_to_dev_environment
+  displayName: 'Deploy to Dev'
+  dependsOn: Build
+  jobs:
+    - deployment: Deploy
+      displayName: Deploy DEV
+      environment: 'development'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - download: current
+              artifact: drop
+            - task: AzureWebApp@1
+              inputs:
+                azureSubscription: 'MSKURATOWSKI MSDN SUBSCRIPTION (d258cafc-cbf7-4d27-a6d6-d80acbf01248)'
+                appType: 'webApp'
+                appName: 'azdevopsworkshops'
+                deployToSlotOrASE: true
+                resourceGroupName: 'rg-weu-workshop'
+                slotName: 'dev'
+                package: '$(Pipeline.Workspace)/**/*.zip'
+                deploymentMethod: 'auto'
+
