@@ -4,7 +4,7 @@ pipeline {
     stage('build') {
       steps {
         echo 'Hello'
-        git(credentialsId: '	github', url: 'https://github.com/mskuratowski/DevOpsWorkshops.git', branch: 'master')
+        git(credentialsId: 'bf60d0f3-c7f6-4474-9562-7dae9a05a806', url: 'https://github.com/mskuratowski/DevOpsWorkshops.git', branch: 'master')
         dotnetRestore()
         dotnetBuild(configuration: 'Release')
         dotnetPublish(configuration: 'Release')
